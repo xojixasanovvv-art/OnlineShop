@@ -1,0 +1,31 @@
+# Maxfiy ma'lumotlar image ichiga tushmasligi kerak
+.env
+.env.*
+!.env.example
+
+# Lokal muhit va keshlar
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Yuklangan fayllar va lokal baza
+static/media/
+*.db
+*.sqlite
+*.log
+
+# Git va hujjatlar
+.git/
+.gitignore
+*.docx
+PRESENTATION.md

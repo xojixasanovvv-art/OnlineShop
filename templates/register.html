@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Ro'yxatdan o'tish - OnlineShop{% endblock %}
+{% block content %}
+<div class="auth-layout">
+    <div class="auth-brand">
+        <div class="brand-mark">OnlineShop</div>
+        <h2 data-i18n="auth.brand_reg">Xarid qilishni hoziroq boshlang</h2>
+        <p data-i18n="auth.brand_reg_p">Ro'yxatdan o'ting va minglab mahsulotlarga kirish huquqiga ega bo'ling.</p>
+    </div>
+    <div class="auth-form-side">
+        <div class="auth-form-wrap">
+            <h1 data-i18n="auth.register_title">Ro'yxatdan o'tish</h1>
+            <p class="subtitle" data-i18n="auth.register_sub">Bir necha soniyada hisob yarating</p>
+            <form id="register-form" class="form">
+                <label for="name" data-i18n="auth.name">Ism</label><input type="text" id="name" required>
+                <label for="username" data-i18n="auth.username">Username</label><input type="text" id="username" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_.-]{3,32}" title="3-32 belgi: harflar, raqamlar, _ . -">
+                <label for="email" data-i18n="auth.email">Email</label><input type="email" id="email" required>
+                <label for="password" data-i18n="auth.password">Parol</label>
+                <div class="password-wrap"><input type="password" id="password" required minlength="8" maxlength="72"><span class="toggle-eye" onclick="togglePassword('password', this)">👁️</span></div>
+                <button type="submit" data-i18n="auth.register_btn">Ro'yxatdan o'tish</button>
+            </form>
+            <p id="message"></p>
+            <p class="switch-link"><span data-i18n="auth.hasAcc">Hisobingiz bormi?</span> <a href="/login-page" data-i18n="auth.login_title">Kirish</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+    document.getElementById('register-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const data = {
+            name: document.getElementById('name').value,
+            username: document.getElementById('username').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+        };
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        const message = document.getElementById('message');
+        if (response.ok) {
+            message.style.color = 'var(--color-accent-dark)';
+            message.textContent = "✓";
+            setTimeout(() => window.location.href = '/login-page', 1200);
+        } else {
+            message.style.color = 'var(--color-danger)';
+            message.textContent = apiError(result, "Error");
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+# Env va maxfiy
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.idea/
+.vscode/
+# Media va upload
+static/media/
+static/media/**
+# DB
+*.db
+*.sqlite
+# Logs
+*.log
+# OS
+.DS_Store
+Thumbs.db
+tz

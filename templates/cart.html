@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Savat — OnlineShop{% endblock %}
+{% block content %}
+<div class="container" style="padding-top: 40px; max-width: 800px;">
+    <h1 style="font-size:28px; margin-bottom: 8px;" data-i18n="cart.title">Savat</h1>
+    <p style="color: var(--color-muted); margin-bottom: 24px;" data-i18n="cart.desc">Mahsulotlarni tekshiring — keyin to'lov sahifasiga o'ting</p>
+    <div id="cart-list" class="profile-info" style="padding:0; overflow:hidden;">
+        <p class="empty-state" data-i18n="common.loading">Yuklanmoqda...</p>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; gap:12px; flex-wrap:wrap;">
+        <button class="btn btn-light" data-i18n="cart.clear" onclick="clearCart()">Savatni tozalash</button>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <span id="cart-total" style="font-family: var(--font-display); font-size:22px; font-weight:600;"></span>
+            <a href="/pay-page" id="continue-btn" class="btn btn-dark" style="display:none;" data-i18n="cart.continue">Savatdan davom etish →</a>
+        </div>
+    </div>
+    <p id="cart-msg" style="margin-top:12px; font-size:14px; color:var(--color-muted);" data-i18n="cart.continue_hint">Davom etish tugmasi sizni to'liq to'lov sahifasiga olib boradi.</p>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+    async function loadCart(){
+        const token=localStorage.getItem('access_token');
+        if(!token){ location.href='/login-page'; return; }
+        const res=await fetch('/cart/', {headers:{'Authorization':'Bearer '+token}});
+        if(!res.ok){ document.getElementById('cart-list').innerHTML=`<p class="empty-state">${t('common.loading')}</p>`; return;}
+        const data=await res.json();
+        const items=data.items || [];
+        const c=document.getElementById('cart-list');
+        const btn=document.getElementById('continue-btn');
+        if(!items.length){
+            c.innerHTML=`<p class="empty-state">${t('cart.empty')} <a href="/" style="color:var(--color-accent-dark);">${t('cart.toProducts')}</a></p>`;
+            document.getElementById('cart-total').textContent='';
+            btn.style.display='none';
+            return;
+        }
+        btn.style.display='inline-flex';
+        let total=0;
+        c.innerHTML='';
+        for(const it of items){
+            let prod={title:'products.fallback', price:0};
+            try{ const r=await fetch('/products/'+it.product_id); if(r.ok) prod=await r.json(); }catch(e){}
+            total += (prod.price||0)*it.quantity;
+            const row=document.createElement('div');
+            row.className='info-row';
+            row.style.alignItems='center';
+            row.innerHTML=`
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <strong><a href="/product/${esc(it.product_id)}">${esc(prod.title)}</a></strong>
+                    <span style="font-size:13px; color:var(--color-muted);">${fmt(prod.price||0)} so'm × ${it.quantity}</span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="number" min="1" value="${it.quantity}" style="width:70px; padding:8px; border:1px solid var(--color-line); border-radius:10px;" onchange="updateQty(${it.id}, this.value)">
+                    <button class="btn btn-light btn-sm" onclick="removeItem(${it.id})">✕</button>
+                </div>`;
+            c.appendChild(row);
+        }
+        document.getElementById('cart-total').textContent = t('cart.total') + ' ' + cur(total);
+    }
+    async function updateQty(id, qty){
+        const token=localStorage.getItem('access_token');
+        const res=await fetch('/cart/items/'+id,{method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({quantity: parseInt(qty)})});
+        if(res.ok){ showToast('✓','success'); loadCart(); updateCartBadge(); } else { const d=await res.json(); showToast(d.detail||t('common.failure'),'error'); }
+    }
+    async function removeItem(id){
+        const token=localStorage.getItem('access_token');
+        const res=await fetch('/cart/items/'+id,{method:'DELETE', headers:{'Authorization':'Bearer '+token}});
+        if(res.ok){ showToast('✓','success'); loadCart(); updateCartBadge(); }
+    }
+    async function clearCart(){
+        const token=localStorage.getItem('access_token');
+        const res=await fetch('/cart/clear',{method:'DELETE', headers:{'Authorization':'Bearer '+token}});
+        const data=await res.json();
+        showToast(data.message||'OK','success'); loadCart(); updateCartBadge();
+    }
+    loadCart();
+    onLangChange(loadCart);
+</script>
+{% endblock %}

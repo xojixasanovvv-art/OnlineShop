@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Profil — OnlineShop{% endblock %}
+{% block content %}
+<div class="container profile-page">
+    <div class="profile-header">
+        <div id="avatar-wrap" style="position:relative;">
+            <div class="profile-avatar" id="avatar-letter" style="width:84px; height:84px; font-size:28px; overflow:hidden; border:3px solid var(--color-line);">?</div>
+            <img id="avatar-img" src="" alt="avatar" style="display:none; width:84px; height:84px; border-radius:50%; object-fit:cover; border:3px solid var(--color-line);">
+        </div>
+        <div>
+            <h1 id="profile-name">Yuklanmoqda...</h1>
+            <span class="role-badge" id="profile-role"></span>
+            <div style="font-size:13px; color:var(--color-muted); margin-top:6px;" id="profile-meta"></div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div>
+            <h3 style="margin-bottom:12px;" data-i18n="profile.info">Shaxsiy ma'lumotlar</h3>
+            <div class="profile-info" id="profile-info"></div>
+
+            <div class="profile-info" style="padding:20px; margin-top:16px;">
+                <h4 style="margin-bottom:10px;" data-i18n="profile.edit">Profilni tahrirlash</h4>
+                <form id="edit-form" class="form">
+                    <label data-i18n="auth.name">Ism</label><input type="text" id="edit-name">
+                    <label data-i18n="auth.email">Email</label><input type="email" id="edit-email">
+                    <label data-i18n="profile.avatar_url">Avatar URL (ixtiyoriy)</label><input type="url" id="edit-avatar-url" placeholder="https://.../avatar.jpg">
+                    <label data-i18n="profile.avatar_file">Yoki fayl yuklash</label><input type="file" id="edit-avatar-file" accept="image/*">
+                    <div id="avatar-preview" style="margin-top:10px; display:none;"><img id="preview-img" src="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid var(--color-line);"></div>
+                    <button type="submit" data-i18n="profile.save">Saqlash</button>
+                </form>
+                <p id="edit-msg" style="font-size:13px; margin-top:10px;"></p>
+            </div>
+        </div>
+
+        <div>
+            <h3 style="margin-bottom:12px;" data-i18n="profile.addrs">Manzillarim</h3>
+            <div id="addr-list" class="profile-info" style="padding:0;"></div>
+            <form id="addr-form" class="form" style="margin-top:12px; background: var(--color-surface); border:1px solid var(--color-line); padding:16px; border-radius:12px;">
+                <label>Country</label><input id="addr-country" required data-i18n-placeholder="profile.ph_country" placeholder="Uzbekistan">
+                <label>City</label><input id="addr-city" required data-i18n-placeholder="profile.ph_city" placeholder="Tashkent">
+                <label>Street</label><input id="addr-street" required data-i18n-placeholder="profile.ph_street" placeholder="Ko'cha">
+                <label>Zip</label><input id="addr-zip" required data-i18n-placeholder="profile.ph_zip" placeholder="Pochta indeksi">
+                <button type="submit" data-i18n="btn.add">Manzil qo'shish</button>
+            </form>
+        </div>
+    </div>
+
+    <h3 style="margin:32px 0 12px;" data-i18n="profile.orders">Buyurtmalarim</h3>
+    <div id="orders-list" class="profile-info" style="padding:0;"></div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+    let currentUser=null;
+    async function loadProfile(){
+        const token=localStorage.getItem('access_token');
+        if(!token) return location.href='/login-page';
+        let res=await fetch('/auth/me',{headers:{'Authorization':'Bearer '+token}});
+        if(!res.ok) res=await fetch('/user/get/me',{headers:{'Authorization':'Bearer '+token}});
+        if(!res.ok){
+            // Faqat 401/403 (token haqiqatan bekor) holatida chiqamiz —
+            // 404/500 kabi server xatolarida foydalanuvchini otvorib yubormaymiz.
+            if(res.status===401||res.status===403){
+                localStorage.removeItem('access_token');
+                return location.href='/login-page';
+            }
+            document.getElementById('message').textContent=t('common.error');
+            return;
+        }
+        const u=await res.json();
+        currentUser=u;
+        // avatar ko'rsatish
+        const letterEl=document.getElementById('avatar-letter');
+        const imgEl=document.getElementById('avatar-img');
+        if(u.avatar_url){
+            imgEl.src=u.avatar_url;
+            imgEl.style.display='block';
+            letterEl.style.display='none';
+            imgEl.onerror=()=>{ imgEl.style.display='none'; letterEl.style.display='flex'; };
+        } else {
+            imgEl.style.display='none';
+            letterEl.style.display='flex';
+            letterEl.textContent=u.name.charAt(0).toUpperCase();
+        }
+        document.getElementById('profile-name').textContent=u.name;
+        document.getElementById('profile-role').textContent=u.role==='admin'?'Admin':t('common.customer');
+        document.getElementById('profile-meta').textContent='@'+u.username+' • '+fmtDate(u.created_at, false);
+        document.getElementById('profile-info').innerHTML=`
+            <div class="info-row"><span class="info-label">Username</span><span class="info-value">${esc(u.username)}</span></div>
+            <div class="info-row"><span class="info-label">Email</span><span class="info-value">${esc(u.email)}</span></div>
+            <div class="info-row"><span class="info-label">Rol</span><span class="info-value">${esc(u.role)}</span></div>
+            <div class="info-row"><span class="info-label">Faol</span><span class="info-value">${u.is_active? 'Ha':'Yo\'q'}</span></div>
+            ${u.avatar_url ? `<div class="info-row"><span class="info-label">Avatar</span><span class="info-value" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(u.avatar_url)}</span></div>` : ''}`;
+        document.getElementById('edit-name').value=u.name;
+        document.getElementById('edit-email').value=u.email;
+        document.getElementById('edit-avatar-url').value=u.avatar_url||'';
+        if(u.role==='admin') document.getElementById('admin-link').style.display='inline';
+        loadAddrs(); loadOrders();
+    }
+
+    // preview fayl tanlanganda
+    document.getElementById('edit-avatar-file').addEventListener('change', e=>{
+        const file=e.target.files[0];
+        if(!file) return;
+        const url=URL.createObjectURL(file);
+        document.getElementById('preview-img').src=url;
+        document.getElementById('avatar-preview').style.display='block';
+    });
+    document.getElementById('edit-avatar-url').addEventListener('input', e=>{
+        const url=e.target.value.trim();
+        if(url){
+            document.getElementById('preview-img').src=url;
+            document.getElementById('avatar-preview').style.display='block';
+        } else document.getElementById('avatar-preview').style.display='none';
+    });
+
+    document.getElementById('edit-form').addEventListener('submit', async e=>{
+        e.preventDefault();
+        const token=localStorage.getItem('access_token');
+        const fileInput=document.getElementById('edit-avatar-file');
+        // avval fayl bor bo'lsa upload qilamiz
+        if(fileInput.files.length){
+            const fd=new FormData(); fd.append('file', fileInput.files[0]);
+            const up=await fetch('/auth/avatar',{method:'POST', headers:{'Authorization':'Bearer '+token}, body: fd});
+            if(up.ok){ showToast('Avatar yuklandi ✓','success'); loadProfile(); return; }
+            else { const j=await up.json(); showToast(j.detail||'Rasm yuklanmadi','error'); return; }
+        }
+        // aks holda URL / ism / email bilan PATCH
+        const payload={
+            name: document.getElementById('edit-name').value || null,
+            email: document.getElementById('edit-email').value || null,
+            avatar_url: document.getElementById('edit-avatar-url').value.trim() || null
+        };
+        const res=await fetch('/auth/me',{method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify(payload)});
+        const data=await res.json();
+        const m=document.getElementById('edit-msg');
+        if(res.ok){ m.style.color='var(--color-accent-dark)'; m.textContent=t('profile.savedMsg'); showToast(t('profile.savedToast'),'success'); loadProfile(); }
+        else { m.style.color='var(--color-danger)'; m.textContent=data.detail||t('common.failure'); }
+    });
+
+    async function loadAddrs(){
+        const token=localStorage.getItem('access_token');
+        const res=await fetch('/addresses/',{headers:{'Authorization':'Bearer '+token}});
+        const list=res.ok?await res.json():[];
+        const c=document.getElementById('addr-list');
+        if(!list.length) c.innerHTML=`<p class="empty-state" style="padding:20px;">${t('profile.noAddr')}</p>`;
+        else { c.innerHTML=''; list.forEach(a=>{ const d=document.createElement('div'); d.className='info-row'; d.innerHTML=`<span>${esc(a.country)}, ${esc(a.city)}, ${esc(a.street)}</span><button class="btn btn-light btn-sm" onclick="delAddr(${esc(a.id)})">✕</button>`; c.appendChild(d);});}
+    }
+    document.getElementById('addr-form').addEventListener('submit', async e=>{
+        e.preventDefault();
+        const token=localStorage.getItem('access_token');
+        const res=await fetch('/addresses/',{method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({country:document.getElementById('addr-country').value, city:document.getElementById('addr-city').value, street:document.getElementById('addr-street').value, zip_code:document.getElementById('addr-zip').value})});
+        if(res.ok){ showToast(t('profile.addrAdded'),'success'); e.target.reset(); loadAddrs(); } else showToast(t('common.failure'),'error');
+    });
+    async function delAddr(id){ const token=localStorage.getItem('access_token'); await fetch('/addresses/'+id,{method:'DELETE', headers:{'Authorization':'Bearer '+token}}); loadAddrs(); }
+    async function loadOrders(){
+        const token=localStorage.getItem('access_token');
+        const res=await fetch('/orders/',{headers:{'Authorization':'Bearer '+token}});
+        const list=res.ok?await res.json():[];
+        const c=document.getElementById('orders-list');
+        if(!list.length) c.innerHTML=`<p class="empty-state" style="padding:20px;">${t('profile.noOrders')}</p>`;
+        else { c.innerHTML=''; list.forEach(o=>{ const d=document.createElement('div'); d.className='info-row'; d.innerHTML=`<span>#${esc(o.id)} • ${esc(stLabel(o.status))} • ${cur(o.total_price)}</span><span style="color:var(--color-muted); font-size:13px;">${fmtDate(o.created_at, false)}</span>`; c.appendChild(d);});}
+    }
+    loadProfile();
+    onLangChange(()=>{ loadProfile(); loadAddrs(); loadOrders(); });
+</script>
+{% endblock %}

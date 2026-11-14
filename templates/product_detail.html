@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Mahsulot — OnlineShop{% endblock %}
+{% block content %}
+<div class="container" style="padding-top: 40px;">
+    <a href="/" class="back-link" data-i18n="pd.back">← Barcha mahsulotlar</a>
+    <div id="product-detail" class="product-detail">
+        <p class="empty-state">Yuklanmoqda...</p>
+    </div>
+
+    <div class="section-heading" style="margin-top: 40px;">
+        <h2 data-i18n="pd.reviews">Sharhlar</h2>
+        <span id="review-count" class="count"></span>
+    </div>
+
+    <div id="reviews-list" class="reviews-list"></div>
+
+    <div class="profile-info" style="padding:24px; margin-top: 24px;">
+        <h3 style="font-size:15px; margin-bottom:12px;" data-i18n="pd.add_review">Sharh qoldirish</h3>
+        <p style="font-size:13px; color: var(--color-muted); margin-bottom:12px;" data-i18n="pd.review_hint">Faqat sotib olgan foydalanuvchilar sharh qoldira oladi (TZ talabi)</p>
+        <form id="review-form" class="form" style="flex-direction: row; gap:10px; align-items:end;">
+            <div style="display:flex; flex-direction:column; flex:1;">
+                <label>Reyting (1-5)</label>
+                <select id="rating" style="padding:11px; border:1px solid var(--color-line); border-radius:var(--radius);">
+                    <option value="5">★★★★★ 5</option>
+                    <option value="4">★★★★ 4</option>
+                    <option value="3">★★★ 3</option>
+                    <option value="2">★★ 2</option>
+                    <option value="1">★ 1</option>
+                </select>
+            </div>
+            <div style="display:flex; flex-direction:column; flex:2;">
+                <label>Izoh</label>
+                <input type="text" id="comment" data-i18n-placeholder="pd.ph_comment" placeholder="Mahsulot haqida fikringiz">
+            </div>
+            <button type="submit" style="margin-top:0; white-space:nowrap;">Yuborish</button>
+        </form>
+        <p id="review-msg" style="font-size:13px; margin-top:10px;"></p>
+    </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+    const productId = {{ product_id }};
+    async function loadProduct(){
+        const res = await fetch('/products/' + productId);
+        if (!res.ok){ document.getElementById('product-detail').innerHTML=`<p class="empty-state">${t('pd.notFound')}</p>`; return; }
+        const p = await res.json();
+        const img = p.images && p.images[0] ? `<img src="${esc(safeUrl(p.images[0].image_url))}" alt="${esc(p.title)}" style="width:100%; max-height:320px; object-fit:cover; border-radius:12px;">` : '<div class="product-image" style="height:280px;">📦</div>';
+        document.getElementById('product-detail').innerHTML = `
+            <div class="detail-grid">
+                <div>${img}</div>
+                <div>
+                    <p class="hero-eyebrow">${esc(p.category ? p.category.name : t('products.title'))}</p>
+                    <h1 style="font-size:32px; margin:8px 0;">${esc(p.title)}</h1>
+                    <p style="color: var(--color-ink-soft); margin-bottom:16px;">${esc(p.description || '')}</p>
+                    <div class="price-row" style="border:none; padding:0;">
+                        <span class="price" style="font-size:28px;">${fmt(p.price)}</span>
+                        <span class="price-unit">so'm</span>
+                    </div>
+                    <p class="${p.stock===0?'stock low':'stock'}" style="margin:8px 0 20px;">${p.stock===0?'Tugadi': p.stock+' dona qoldi'}</p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <button class="btn btn-dark" onclick="addToCartDetail()" ${p.stock===0?'disabled':''} data-i18n="pd.add_to_cart">Savatga qo'shish 🛒</button>
+                        <a href="/cart-page" class="btn btn-light" data-i18n="pd.view_cart">Savatni ko'rish</a>
+                        <button class="heart-btn heart-btn-lg" data-pid="${p.id}" onclick="toggleWishlist(${p.id}, this)" aria-pressed="false" title="${t('wishlist.add')}">♡</button>
+                    </div>
+                </div>
+            </div>`;
+        syncWishlistButtons();
+    }
+    async function loadReviews(){
+        const res = await fetch('/products/' + productId + '/reviews');
+        const list = res.ok ? await res.json() : [];
+        document.getElementById('review-count').textContent = list.length + ' ta sharh';
+        const c = document.getElementById('reviews-list');
+        if (!list.length){ c.innerHTML=`<p class="empty-state" style="padding:24px;">${t('pd.noReviews')}</p>`; return; }
+        c.innerHTML='';
+        list.forEach(r=>{
+            const d=document.createElement('div');
+            d.className='review-card';
+            d.innerHTML=`<div style="display:flex; justify-content:space-between;"><strong>${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</strong><span style="color:var(--color-muted); font-size:13px;">${fmtDate(r.created_at, false)}</span></div><p style="margin-top:8px; color:var(--color-ink-soft);">${esc(r.comment||'')}</p>`;
+            c.appendChild(d);
+        });
+    }
+    async function addToCartDetail(){
+        const token=localStorage.getItem('access_token');
+        if(!token){ showToast('Avval kiring','error'); return;}
+        const res=await fetch('/cart/items',{method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({product_id: productId, quantity:1})});
+        const data=await res.json();
+        if(res.ok){ showToast(t('pd.addedToCart'),'success'); updateCartBadge(); } else showToast(data.detail||'Xatolik','error');
+    }
+    document.getElementById('review-form').addEventListener('submit', async e=>{
+        e.preventDefault();
+        const token=localStorage.getItem('access_token');
+        if(!token){ showToast('Avval kiring','error'); return;}
+        const res=await fetch('/products/'+productId+'/reviews',{method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({rating: parseInt(document.getElementById('rating').value), comment: document.getElementById('comment').value})});
+        const data=await res.json();
+        const msg=document.getElementById('review-msg');
+        if(res.ok){ msg.style.color='var(--color-accent-dark)'; msg.textContent=t('pd.reviewAdded')+' ✓'; loadReviews(); e.target.reset();}
+        else { msg.style.color='var(--color-danger)'; msg.textContent=data.detail||t('common.failure'); }
+    });    loadProduct(); loadReviews();
+    onLangChange(()=>{ loadProduct(); loadReviews(); });
+</script>
+{% endblock %}

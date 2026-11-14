@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Kirish - OnlineShop{% endblock %}
+{% block content %}
+<div class="auth-layout">
+    <div class="auth-brand">
+        <div class="brand-mark">OnlineShop</div>
+        <h2 data-i18n="auth.brand_login">Qaytganingizdan xursandmiz</h2>
+        <p data-i18n="auth.brand_login_p">Hisobingizga kiring va buyurtmalaringizni, savatingizni davom ettiring.</p>
+    </div>
+    <div class="auth-form-side">
+        <div class="auth-form-wrap">
+            <h1 data-i18n="auth.login_title">Kirish</h1>
+            <p class="subtitle" data-i18n="auth.login_sub">Hisobingizga kirish uchun ma'lumotlarni kiriting</p>
+            <form id="login-form" class="form">
+                <label for="username" data-i18n="auth.username">Username yoki email</label>
+                <input type="text" id="username" required autocomplete="username" data-i18n-placeholder="auth.usernamePh">
+                <label for="password" data-i18n="auth.password">Parol</label>
+                <div class="password-wrap">
+                    <input type="password" id="password" required>
+                    <span class="toggle-eye" onclick="togglePassword('password', this)">👁️</span>
+                </div>
+                <button type="submit" data-i18n="auth.login_btn">Kirish</button>
+            </form>
+            <p id="message"></p>
+            <p class="switch-link"><a href="/forgot-password-page" data-i18n="forgot.link">Parolni unutdingizmi?</a></p>
+            <p class="switch-link"><span data-i18n="auth.login_noacc">Hisobingiz yo'qmi?</span> <a href="/register-page" data-i18n="auth.register_title">Ro'yxatdan o'ting</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const data = {
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value,
+        };
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        const message = document.getElementById('message');
+        if (response.ok) {
+            localStorage.setItem('access_token', result.access_token);
+            localStorage.setItem('refresh_token', result.refresh_token);
+            message.style.color = 'var(--color-accent-dark)';
+            message.textContent = "✓";
+            setTimeout(() => window.location.href = '/profile-page', 800);
+        } else {
+            message.style.color = 'var(--color-danger)';
+            message.textContent = result.detail || "Error";
+        }
+    });
+</script>
+{% endblock %}

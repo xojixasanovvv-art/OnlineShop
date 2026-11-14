@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}To'lov — OnlineShop{% endblock %}
+{% block content %}
+<div class="container" style="padding-top: 32px; max-width: 900px;">
+    <a href="/cart-page" class="back-link" data-i18n="pay.back">← Savatga qaytish</a>
+    <h1 style="font-size:26px; margin:12px 0 6px;" data-i18n="pay.title">To'lov sahifasi</h1>
+    <p style="color:var(--color-muted); margin-bottom:24px;" data-i18n="pay.desc">Buyurtmani tekshiring, keyin to'lovni amalga oshiring. 15 daqiqada chek yuklanmasa bekor bo'ladi.</p>
+    <div class="grid-2" style="align-items:start;">
+        <div>
+            <div class="profile-info" style="padding:0; overflow:hidden;">
+                <div style="padding:14px 20px; border-bottom:1px solid var(--color-line); font-weight:600;" data-i18n="pay.cart">Savat tarkibi</div>
+                <div id="cart-list"><p class="empty-state" style="padding:20px;" data-i18n="common.loading">Yuklanmoqda...</p></div>
+                <div style="padding:14px 20px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-line);">
+                    <span style="color:var(--color-muted);" data-i18n="pay.total">Jami</span>
+                    <span id="cart-total" style="font-family:var(--font-display); font-size:20px; font-weight:700;">—</span>
+                </div>
+            </div>
+            <button id="order-btn" class="btn btn-dark" style="width:100%; margin-top:16px; padding:14px;" data-i18n="pay.orderBtn">Buyurtma berish — tekshirish bilan →</button>
+            <p id="order-msg" style="font-size:13px; margin-top:10px;"></p>
+            <div id="order-info" style="display:none; margin-top:16px;" class="profile-info"></div>
+        </div>
+        <div>
+            <div id="payment-section" style="display:none;">
+                <style>
+                  .flashcard-new{position:relative; background: radial-gradient(120% 150% at 10% 0%, #2a2f6a 0%, #1B1F3B 55%, #0f1225 100%); color:#fff; border-radius:20px; padding:22px 24px 18px; box-shadow: 0 20px 50px rgba(27,31,59,.35), inset 0 1px 0 rgba(255,255,255,.12); overflow:hidden; }
+                  .flashcard-new::after{content:""; position:absolute; top:-40%; right:-20%; width:320px; height:320px; background: radial-gradient(circle, rgba(31,175,125,.25) 0%, transparent 70%); pointer-events:none;}
+                  .fc-top{display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1;}
+                  .fc-badge{font-size:10px; letter-spacing:.12em; opacity:.8; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); padding:6px 10px; border-radius:999px;}
+                  .fc-timer{background:#fff; color:var(--color-ink); padding:7px 14px; border-radius:999px; font-size:13px; font-weight:800; box-shadow:0 4px 12px rgba(0,0,0,.15); min-width:64px; text-align:center; transition:.2s;}
+                  .fc-timer.warn{ background:var(--color-danger); color:#fff; animation:pulse 1s infinite;}
+                  @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+                  .fc-chip-row{display:flex; align-items:center; gap:12px; margin-top:18px; position:relative; z-index:1;}
+                  .fc-chip{width:42px; height:30px; border-radius:6px; background: linear-gradient(135deg,#ffd66b 0%,#ffb100 100%); box-shadow:inset 0 1px 0 rgba(255,255,255,.6); display:flex; align-items:center; justify-content:center; font-size:10px; color:#7a4a00;}
+                  .fc-type{margin-left:auto; font-size:11px; font-weight:700; letter-spacing:.08em; opacity:.9; border:1px solid rgba(255,255,255,.25); padding:4px 10px; border-radius:999px;}
+                  .fc-number{margin-top:18px; font-family:ui-monospace, SFMono-Regular, monospace; font-size:22px; letter-spacing:.18em; display:flex; align-items:center; gap:10px; flex-wrap:wrap; position:relative; z-index:1;}
+                  .fc-copy{font-size:11px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 10px; border-radius:999px; cursor:pointer;}
+                  .fc-copy:active{transform:scale(.96)}
+                  .fc-bottom{display:flex; justify-content:space-between; margin-top:18px; position:relative; z-index:1;}
+                  .fc-label{font-size:10px; letter-spacing:.1em; opacity:.6; text-transform:uppercase;}
+                  .fc-value{font-size:13px; font-weight:600; margin-top:4px;}
+                  .fc-amount{font-family:var(--font-display); font-size:20px; font-weight:800;}
+                </style>
+                <div class="flashcard-new">
+                    <div class="fc-top">
+                        <span class="fc-badge" data-i18n="pay.flash">DEMO UZCARD / HUMO • FLASHCARD</span>
+                        <span id="pay-timer" class="fc-timer">15:00</span>
+                    </div>
+                    <div class="fc-chip-row">
+                        <div class="fc-chip">▦</div>
+                        <span style="font-size:18px; opacity:.7;">)))</span>
+                        <span class="fc-type">UZCARD</span>
+                    </div>
+                    <div class="fc-number">
+                        <span id="pay-card-number">8600 1234 5678 9012</span>
+                        <button class="fc-copy" onclick="copyCard()" title="Nusxalash">⎘ Copy</button>
+                    </div>
+                    <div class="fc-bottom">
+                        <div>
+                            <div class="fc-label">Card holder</div>
+                            <div id="pay-holder" class="fc-value">OnlineShop Demo</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="fc-label">Amount</div>
+                            <div id="pay-amount" class="fc-value fc-amount">0 so'm</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:14px; font-size:11px; opacity:.6; position:relative; z-index:1;" data-i18n="pay.demo_note">Demo karta — baza da balans bor, website avtomatik tekshiradi.</div>
+                </div>
+                <div class="profile-info" style="padding:20px; margin-top:16px;">
+                    <h4 style="font-size:14px; margin-bottom:8px;" data-i18n="pay.upload_title">Chekni yuklang (screenshot)</h4>
+                    <p style="font-size:12px; color:var(--color-muted); margin-bottom:12px;" data-i18n="pay.upload_desc">Kartaga pul tashlagach, chek rasmini yuklang.</p>
+                    <form id="pay-form" class="form" style="flex-direction:row; gap:10px; align-items:end;">
+                        <input type="file" id="pay-file" accept="image/*" required style="flex:1;">
+                        <button type="submit" id="pay-submit" style="margin:0; white-space:nowrap; flex-shrink:0;" data-i18n="pay.send">Yuborish</button>
+                    </form>
+                    <p id="pay-msg" style="font-size:13px; margin-top:10px;"></p>
+                    <div id="pay-status" style="margin-top:10px; font-size:14px; font-weight:700;"></div>
+                    <div id="pay-screenshot-preview" style="margin-top:12px; display:none;"><img id="pay-preview-img" src="" style="max-width:100%; border-radius:12px; border:1px solid var(--color-line);"></div>
+                </div>
+            </div>
+            <div id="payment-placeholder" class="profile-info" style="padding:40px 20px; text-align:center; color:var(--color-muted);" data-i18n="pay.placeholder">Buyurtma berilgach bu yerda karta va 15 daqiqa taymer chiqadi.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+let currentOrderId=null;
+let timer=null;
+async function loadCartForPay(){
+    const token=localStorage.getItem('access_token');
+    if(!token) return location.href='/login-page';
+    const res=await fetch('/cart/',{headers:{'Authorization':'Bearer '+token}});
+    if(!res.ok){ document.getElementById('cart-list').innerHTML=`<p class="empty-state" style="padding:20px;">${t('common.loading')}</p>`; return; }
+    const data=await res.json();
+    const items=data.items||[];
+    const c=document.getElementById('cart-list');
+    if(!items.length){
+        c.innerHTML=`<p class="empty-state" style="padding:20px;">${t('cart.empty')} <a href="/" style="color:var(--color-accent-dark);">${t('cart.toProducts')}</a></p>`;
+        document.getElementById('cart-total').textContent=cur(0);
+        document.getElementById('order-btn').disabled=true;
+        return;
+    }
+    let total=0;
+    c.innerHTML='';
+    for(const it of items){
+        let prod={title:t('products.fallback'), price:0};
+        try{ const r=await fetch('/products/'+it.product_id); if(r.ok) prod=await r.json(); }catch(e){}
+        total+= (prod.price||0)*it.quantity;
+        const row=document.createElement('div');
+        row.className='info-row';
+        row.innerHTML=`<span>${esc(prod.title)} × ${esc(it.quantity)}</span><span style="font-weight:600;">${fmt(prod.price*it.quantity)} so'm</span>`;
+        c.appendChild(row);
+    }
+    document.getElementById('cart-total').textContent=cur(total);
+}
+async function createOrderFull(){
+    const token=localStorage.getItem('access_token');
+    const btn=document.getElementById('order-btn');
+    const msg=document.getElementById('order-msg');
+    btn.disabled=true; btn.textContent=t('pay.order_checking');
+    const res=await fetch('/orders/',{method:'POST', headers:{'Authorization':'Bearer '+token}});
+    const j=await res.json();
+    if(!res.ok){
+        msg.style.color='var(--color-danger)'; msg.textContent=j.detail||t('common.failure');
+        showToast(j.detail||t('common.failure'),'error');
+        btn.disabled=false; btn.textContent=t('pay.orderBtn');
+        return;
+    }
+    msg.style.color='var(--color-accent-dark)'; msg.textContent=t('pay.orderWord')+' #'+j.id+' ✓';
+    showToast('✓','success');
+    document.getElementById('order-info').style.display='block';
+    document.getElementById('order-info').innerHTML=`<div style="padding:14px 20px;"><strong>Buyurtma #${j.id}</strong> • ${fmt(j.total_price)} so'm • ${j.status}<br><span style="font-size:12px; color:var(--color-muted);">${fmtDate(j.created_at)}</span></div>`;
+    btn.style.display='none';
+    await startPayment(j.id);
+}
+async function startPayment(orderId){
+    const token=localStorage.getItem('access_token');
+    const r=await fetch('/orders/'+orderId+'/pay',{method:'POST', headers:{'Authorization':'Bearer '+token}});
+    const j=await r.json();
+    if(!r.ok){ showToast(j.detail||t('common.failure'),'error'); return; }
+    currentOrderId=orderId;
+    document.getElementById('payment-placeholder').style.display='none';
+    document.getElementById('payment-section').style.display='block';
+    document.getElementById('pay-card-number').textContent=j.card_number;
+    document.getElementById('pay-holder').textContent=j.card_holder;
+    document.getElementById('pay-amount').textContent=fmt(j.amount)+' so\'m';
+    document.getElementById('pay-status').textContent=t('pay.statusLbl')+': '+stLabel(j.status)+' • #'+orderId;
+    document.getElementById('pay-status').dataset.orderId=orderId;
+    startTimer(j.expires_at);
+}
+function parseExpires(str){
+    if(!str) return null;
+    let s=String(str).trim().replace(' ', 'T');
+    if(!/[Zz]$/.test(s) && !/[+-]\d{2}:?\d{2}$/.test(s)){ s = s + 'Z'; }
+    let d=new Date(s);
+    if(!isNaN(d)) return d;
+    return new Date(str);
+}
+function copyCard(){
+  const num=document.getElementById('pay-card-number').textContent.replace(/\s/g,'');
+  navigator.clipboard.writeText(num).then(()=> showToast('Nusxalandi ✓','success')).catch(()=> showToast(num,'success'));
+}
+function startTimer(expiresAtInput){
+    clearInterval(timer);
+    const expiresAt = expiresAtInput instanceof Date ? expiresAtInput : parseExpires(expiresAtInput);
+    const el=document.getElementById('pay-timer');
+    if(!el) return;
+    if(!expiresAt || isNaN(expiresAt)){ el.textContent='15:00'; return; }
+    function tick(){
+        const diff=expiresAt - new Date();
+        if(diff<=0){ el.textContent='00:00'; el.style.background='var(--color-danger)'; el.style.color='#fff'; el.classList.add('warn'); document.getElementById('pay-status').textContent=t('st.expired'); clearInterval(timer); const b=document.getElementById('pay-submit'); if(b) b.disabled=true; return; }
+        const m=Math.floor(diff/60000), s=Math.floor((diff%60000)/1000);
+        el.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+        el.style.background='#fff'; el.style.color='var(--color-ink)';
+        el.classList.toggle('warn', diff < 5*60*1000);
+    }
+    tick(); timer=setInterval(tick, 1000);
+}
+document.getElementById('order-btn').addEventListener('click', createOrderFull);
+document.getElementById('pay-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    if(!currentOrderId) return;
+    const token=localStorage.getItem('access_token');
+    const file=document.getElementById('pay-file').files[0];
+    if(!file) return showToast('File','error');
+    const preview=document.getElementById('pay-preview-img');
+    preview.src=URL.createObjectURL(file);
+    document.getElementById('pay-screenshot-preview').style.display='block';
+    const fd=new FormData(); fd.append('file', file);
+    const r=await fetch('/orders/'+currentOrderId+'/pay/screenshot',{method:'POST', headers:{'Authorization':'Bearer '+token}, body: fd});
+    const j=await r.json();
+    const m=document.getElementById('pay-msg');
+    if(r.ok){
+        m.style.color='var(--color-accent-dark)'; m.textContent=j.message;
+        showToast(j.message,'success');
+        const st=await fetch('/orders/'+currentOrderId+'/payment',{headers:{'Authorization':'Bearer '+token}});
+        if(st.ok){
+            const pj=await st.json();
+            document.getElementById('pay-status').textContent=t('pay.statusLbl')+': '+stLabel(pj.status)+(pj.status==='verified'?' ✅ '+t('st.verified')+' — '+t('pd.redirecting'):' ⏳ '+t('st.pending'));
+            if(pj.status==='verified'){
+                clearInterval(timer); document.getElementById('pay-timer').textContent='PAID'; document.getElementById('pay-timer').style.background='var(--color-accent)';
+                setTimeout(()=> location.href='/', 2200);
+            }
+        }
+    } else { m.style.color='var(--color-danger)'; m.textContent=j.detail||t('common.failure'); showToast(j.detail||t('common.failure'),'error'); }
+});
+loadCartForPay();
+onLangChange(loadCartForPay);
+</script>
+{% endblock %}
