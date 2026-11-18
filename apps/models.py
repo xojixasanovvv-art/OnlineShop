@@ -243,3 +243,6 @@ class PasswordResetToken(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     user: "User" = Relationship(back_populates="reset_tokens")
+
+
+#  model qismi
